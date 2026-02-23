@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <img src="{% static 'images/logo.jpeg' %}" alt="Pune Color Festival Logo" class="hero-logo">
+    <h1>Colour Carnival 1.0</h1>
+    <p>The Ultimate Holi Party of the Year! &mdash; 8th March, Ambajogai</p>
+    <a href="#events" class="btn-primary">Get Your Tickets</a>
+</section>
+
+<!-- About Section -->
+<section id="about" class="about-section">
+    <h2>About the Festival</h2>
+    <div class="content-grid">
+        <p>We are excited to launch Pune Color Festival 1.0! Pune's Biggest Holi Festival, with more fun, more
+            entertainment, and more memories at Multiple Venues.</p>
+    </div>
+</section>
+
+<!-- Events Section -->
+<section id="events" class="events-section">
+    <h2>Our Events</h2>
+    <div class="venue-grid">
+        {% for event in events %}
+        <div class="venue-card">
+            {% if event.image %}
+            <img src="{{ event.image.url }}" alt="{{ event.title }}"
+                style="width:100%; border-radius:10px; margin-bottom:15px; object-fit: cover;">
+            {% endif %}
+            <h3>{{ event.title }}</h3>
+            <p style="font-size: 1.1rem; color: var(--text-color);"><strong>Venue:</strong> {{ event.venue_name }}</p>
+            <p style="color: #666; margin-bottom: 15px;">{{ event.venue_address }}</p>
+            {% if event.start_time %}
+            <p style="color: var(--primary-red); font-weight: 700; margin-bottom: 15px; font-size: 1rem;">
+                &#128345;
+                <span>{{ event.start_time|time:"g:i A" }}</span>
+                {% if event.end_time %}
+                &ndash;
+                <span>{{ event.end_time|time:"g:i A" }}</span>
+                {% endif %}
+            </p>
+            {% endif %}
+            {% if event.map_embed_url %}
+            <iframe src="{{ event.map_embed_url }}" width="100%" height="250"
+                style="border:0; border-radius:10px; margin-bottom:15px;" allowfullscreen="" loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"></iframe>
+            {% endif %}
+            <p>{{ event.description }}</p>
+            <div style="margin-top: 25px;">
+                <button class="btn-primary" hx-get="{% url 'event_tickets' event.id %}"
+                    hx-target="#ticket-container-{{ event.id }}">Book My Ticket</button>
+            </div>
+            <div id="ticket-container-{{ event.id }}" style="margin-top: 20px; text-align: left;"></div>
+        </div>
+        {% empty %}
+        <p>Events coming soon!</p>
+        {% endfor %}
+    </div>
+</section>
+
+{% endblock %}

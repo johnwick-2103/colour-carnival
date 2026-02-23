@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="checkout-section">
+    <div class="checkout-card">
+        <h2 style="color: var(--primary-red); margin-bottom: 20px;">Complete Your Payment</h2>
+
+        <p style="font-size: 1.1rem; margin-bottom: 10px;">
+            Booking for: <strong>{{ event.title }}</strong>
+        </p>
+        <p style="font-size: 1.1rem; margin-bottom: 30px;">
+            Amount to Pay: <strong>&#8377;{{ amount_rupees }}</strong>
+        </p>
+
+        {% if local_payment_bypass %}
+        <form action="{% url 'payment_verify' %}" method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="bypass" value="true">
+            <input type="hidden" name="razorpay_order_id" value="{{ order_id }}">
+            <button type="submit" class="razorpay-payment-button" style="background-color: #28a745;">
+                Simulate Payment (Local Test)
+            </button>
+        </form>
+        {% else %}
+        <form action="{% url 'payment_verify' %}" method="POST">
+            {% csrf_token %}
+            <script src="https://checkout.razorpay.com/v1/checkout.js" data-key="{{ razorpay_key_id }}"
+                data-amount="{{ amount }}" data-currency="INR" data-order_id="{{ order_id }}"
+                data-buttontext="Pay with Razorpay" data-name="{{ event.title }}"
+                data-description="Festival Ticket Booking" data-prefill.name="{{ customer_name }}"
+                data-prefill.email="{{ customer_email }}" data-prefill.contact="{{ customer_phone }}"
+                data-theme.color="#f29c1f">
+                </script>
+        </form>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

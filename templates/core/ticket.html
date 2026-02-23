@@ -1,0 +1,316 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Ticket - Colour Carnival 1.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #f0f0f0;
+            padding: 30px 20px;
+            color: #222;
+        }
+
+        .page-actions {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .page-actions button {
+            background: #e63946;
+            color: #fff;
+            border: none;
+            padding: 14px 32px;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 0 8px 8px;
+            touch-action: manipulation;
+        }
+
+        .page-actions a {
+            background: #333;
+            color: #fff;
+            text-decoration: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        .ticket-wrapper {
+            max-width: 680px;
+            margin: 0 auto;
+        }
+
+        .ticket {
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            margin-bottom: 20px;
+        }
+
+        .ticket-header {
+            background: linear-gradient(135deg, #e63946, #f4a261);
+            padding: 30px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .ticket-header h1 {
+            font-size: 2.2rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .ticket-header p {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-top: 6px;
+        }
+
+        .ticket-divider {
+            display: flex;
+            align-items: center;
+            position: relative;
+            background: #f0f0f0;
+        }
+
+        .ticket-divider::before,
+        .ticket-divider::after {
+            content: '';
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #f0f0f0;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .ticket-divider::before {
+            left: -14px;
+        }
+
+        .ticket-divider::after {
+            right: -14px;
+        }
+
+        .ticket-divider hr {
+            flex: 1;
+            border: none;
+            border-top: 2px dashed #ccc;
+            margin: 10px 20px;
+        }
+
+        .ticket-body {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .ticket-details h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #e63946;
+            margin-bottom: 16px;
+        }
+
+        .detail-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .detail-label {
+            font-weight: 700;
+            color: #555;
+            min-width: 120px;
+        }
+
+        .detail-value {
+            color: #222;
+        }
+
+        .qr-section {
+            text-align: center;
+        }
+
+        .qr-section img {
+            width: 150px;
+            height: 150px;
+            border: 3px solid #e63946;
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .qr-section p {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 6px;
+        }
+
+        .ticket-footer {
+            background: #222;
+            color: #fff;
+            text-align: center;
+            padding: 16px;
+            font-size: 0.85rem;
+        }
+
+        .ticket-footer span {
+            color: #f4a261;
+            font-weight: 700;
+        }
+
+        .booking-id {
+            font-size: 0.8rem;
+            color: #888;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 600px) {
+            body {
+                padding: 16px 12px;
+            }
+
+            .ticket-wrapper {
+                max-width: 100%;
+            }
+
+            .ticket-header h1 {
+                font-size: 1.5rem;
+                letter-spacing: 1px;
+            }
+
+            .ticket-body {
+                grid-template-columns: 1fr;
+                padding: 20px 16px;
+            }
+
+            .qr-section {
+                border-top: 2px dashed #eee;
+                padding-top: 20px;
+                margin-top: 8px;
+            }
+
+            .qr-section img {
+                width: 130px;
+                height: 130px;
+            }
+
+            .detail-label {
+                min-width: 90px;
+            }
+
+            .page-actions {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .page-actions button,
+            .page-actions a {
+                width: 100%;
+                max-width: 300px;
+                text-align: center;
+                margin: 0;
+            }
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+
+            .page-actions {
+                display: none;
+            }
+
+            .ticket {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="page-actions">
+        <button onclick="window.print()">&#128438; Download / Print Ticket</button>
+        <a href="{% url 'index' %}">&#8592; Back to Home</a>
+    </div>
+
+    <div class="ticket-wrapper">
+        {% for item in items %}
+        <div class="ticket">
+            <div class="ticket-header">
+                <h1>Colour Carnival 1.0</h1>
+                <p>&#127881; The Ultimate Holi Party of the Year!</p>
+            </div>
+            <div class="ticket-divider"><hr></div>
+            <div class="ticket-body">
+                <div class="ticket-details">
+                    <h2>{{ item.ticket }}</h2>
+                    <div class="detail-row">
+                        <span class="detail-label">&#128100; Name</span>
+                        <span class="detail-value">{{ item.name }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">&#128197; Date</span>
+                        <span class="detail-value">8th March, 2026 &nbsp;|&nbsp; 10:00 AM &ndash; 4:00 PM</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">&#128205; Venue</span>
+                        <span class="detail-value">Pandhurang Lawns, Guruvar Peth, Ambajogai</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">&#127903; Quantity</span>
+                        <span class="detail-value">{{ item.qty }} ticket(s)</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">&#8377; Amount Paid</span>
+                        <span class="detail-value" style="color:#e63946; font-weight:800;">&#8377;{{ item.amount }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">&#128273; Payment ID</span>
+                        <span class="detail-value" style="font-size:0.8rem;">{{ item.payment_id }}</span>
+                    </div>
+                    <p class="booking-id">Booking #{{ item.booking_id }}</p>
+                </div>
+                <div class="qr-section">
+                    <img src="data:image/png;base64,{{ item.qr }}" alt="QR Code">
+                    <p>Show this QR at the gate</p>
+                </div>
+            </div>
+            <div class="ticket-footer">
+                For queries: <span>9145452609 / 9359176168</span> &nbsp;|&nbsp; &#64;<span>colourcarnival_1.0</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</body>
+
+</html>

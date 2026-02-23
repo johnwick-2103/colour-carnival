@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: colour-carnival
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn pune_color_festival.wsgi:application"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: LOCAL_PAYMENT_BYPASS
+        value: "False"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: colour-carnival-db
+          property: connectionString
+    autoDeploy: true
+
+databases:
+  - name: colour-carnival-db
+    plan: free

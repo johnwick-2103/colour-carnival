@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="checkout-section">
+    <div class="checkout-card">
+        <h2 style="color: #27ae60; margin-bottom: 10px;">Payment Successful! &#127881;</h2>
+        <p style="font-size: 1.05rem; margin-bottom: 10px; color: #444;">
+            Thank you for booking with Colour Carnival 1.0!
+        </p>
+        <p style="font-size: 0.97rem; margin-bottom: 24px; color: #666;">
+            Your tickets are confirmed. Download your ticket below &mdash; you&apos;ll need to show the QR code at the
+            entry gate.
+        </p>
+
+        <a href="{% url 'download_ticket' bookings.0.order_id %}" class="btn-primary"
+            style="text-decoration: none; display: inline-block; font-size: 1.05rem; margin-bottom: 28px;">
+            &#128438; Download My Ticket
+        </a>
+
+        <div style="background: #fafafa; padding: 20px; border-radius: 10px; text-align: left; margin-bottom: 24px;">
+            <h4 style="margin-bottom: 12px; color: #333;">Booking Summary:</h4>
+            {% for booking in bookings %}
+            <p style="margin: 6px 0;">
+                <strong>{{ booking.ticket_type.name }}</strong> x {{ booking.quantity }}
+                &mdash; &#8377;{{ booking.total_amount }}
+            </p>
+            {% endfor %}
+            <p style="margin-top: 14px; border-top: 1px solid #ddd; padding-top: 10px; font-size: 0.9rem; color: #666;">
+                Payment ID: <strong>{{ bookings.0.payment_id }}</strong>
+            </p>
+        </div>
+
+        <a href="{% url 'index' %}" style="color: #888; text-decoration: underline; font-size: 0.9rem;">
+            &#8592; Back to Home
+        </a>
+    </div>
+</section>
+{% endblock %}

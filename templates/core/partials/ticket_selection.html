@@ -1,0 +1,70 @@
+<form id="booking-form-{{ event.id }}" action="{% url 'checkout' event.id %}" method="post"
+    onsubmit="return validateBooking(this, '{{ event.id }}')">
+    {% csrf_token %}
+    <div hx-get="{% url 'update_total' %}" hx-target="#total-display-{{ event.id }}"
+        hx-trigger="change, keyup delay:200ms" hx-include="#booking-form-{{ event.id }} input[type='number']">
+        <div class="ticket-container"
+            style="display:flex; flex-direction:column; gap:20px; background: #fafafa; padding: 20px; border-radius: 10px; margin-top: 20px;">
+            <h4 style="margin-bottom: 5px; color: var(--primary-red); text-align: center;">
+                Select Tickets for {{ event.title }}
+            </h4>
+            {% if ticket_types %}
+            <div style="display: grid; gap: 15px;">
+                {% for ticket in ticket_types %}
+                <div class="ticket-card"
+                    style="padding:15px; text-align: left; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h4 style="margin-bottom: 5px;">{{ ticket.name }}</h4>
+                        <p style="font-size:0.9rem; color: #666; margin-bottom: 5px;">{{ ticket.description }}</p>
+                        <p class="price" style="font-size:1.2rem; margin: 0;">₹{{ ticket.price }}</p>
+                    </div>
+                    <div class="quantity-control" style="margin-top: 0;">
+                        <input type="number" id="qty_{{ ticket.id }}" name="qty_{{ ticket.id }}" value="0" min="0"
+                            max="{{ ticket.quantity_available }}" style="width: 60px; padding: 5px; font-size: 1rem;">
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="booking-summary"
+                style="padding:15px; background: #fff; border: 1px solid #ddd; text-align: center; margin-top: 10px;">
+                <h4 style="margin-bottom: 10px;">Booking Summary</h4>
+                <div id="total-display-{{ event.id }}"
+                    style="font-size: 1.5rem; font-weight: 700; margin-bottom: 20px;">
+                    Total: ₹0.00
+                </div>
+
+                <div style="text-align: left; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" name="customer_name" placeholder="Full Name" required
+                        style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                    <input type="email" name="customer_email" placeholder="Email Address" required
+                        style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                    <input type="tel" name="customer_phone" placeholder="Phone Number" required
+                        style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                </div>
+
+                <!-- Keep the URL as # for now, handled by normal form submission -->
+                <div id="booking-error-{{ event.id }}"
+                    style="display:none; background:#ffe0e0; color:#c00; border:1px solid #f99; padding:10px; border-radius:6px; margin-bottom:10px; font-weight:600;">
+                    &#9888; Please select at least 1 ticket before proceeding.
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Proceed to Book</button>
+            </div>
+            {% else %}
+            <p style="text-align: center;">Ticket information coming soon!</p>
+            {% endif %}
+        </div>
+</form>
+
+<script>
+    function validateBooking(form, eventId) {
+        var inputs = form.querySelectorAll('input[type="number"]');
+        var total = 0;
+        inputs.forEach(function (input) { total += parseInt(input.value) || 0; });
+        if (total === 0) {
+            var alert = document.getElementById('booking-error-' + eventId);
+            if (alert) { alert.style.display = 'block'; }
+            return false;
+        }
+        return true;
+    }
+</script>

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="about-section" style="text-align: left; max-width: 600px; margin: 0 auto; text-align: center;">
+    <div
+        style="background: #fff; border-radius: 10px; padding: 40px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-top: 50px;">
+        <h2 style="color: var(--primary-red); margin-bottom: 20px;">Confirm Deletion</h2>
+        <p style="font-size: 1.1rem; margin-bottom: 30px;">
+            Are you sure you want to delete the ticket <strong>"{{ ticket.name }}"</strong>?
+            <br>
+            <span style="font-size: 0.9rem; color: #666;">This action cannot be undone.</span>
+        </p>
+
+        <form method="post" style="display: flex; gap: 15px; justify-content: center;">
+            {% csrf_token %}
+            <a href="{% url 'organizer_dashboard' %}" class="btn-primary"
+                style="background: #eee; color: #333;">Cancel</a>
+            <button type="submit" class="btn-primary" style="background: var(--primary-red);">Yes, Delete
+                Ticket</button>
+        </form>
+    </div>
+</section>
+{% endblock %}

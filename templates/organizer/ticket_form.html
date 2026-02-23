@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="about-section" style="text-align: left; max-width: 800px; margin: 0 auto;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>Add Ticket to: {{ event.title }}</h2>
+        <a href="{% url 'organizer_dashboard' %}" style="color: var(--primary-blue); text-decoration: none;">&larr; Back
+            to Dashboard</a>
+    </div>
+
+    <div style="background: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <form method="post" style="display: flex; flex-direction: column; gap: 20px;">
+            {% csrf_token %}
+
+            {% for field in form %}
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <label for="{{ field.id_for_label }}" style="font-weight: bold; color: var(--text-color);">
+                    {{ field.label }} {% if field.field.required %}<span style="color: red;">*</span>{% endif %}
+                </label>
+
+                {{ field }}
+
+                {% if field.help_text %}
+                <small style="color: #666;">{{ field.help_text }}</small>
+                {% endif %}
+                {% for error in field.errors %}
+                <p style="color: var(--primary-red); font-size: 0.9rem; margin: 0;">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <div style="margin-top: 20px;">
+                <button type="submit" class="btn-primary" style="padding: 12px 30px; font-size: 1.1rem;">Save
+                    Ticket</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- Basic styling for the auto-generated input fields -->
+<style>
+    form input[type="text"],
+    form input[type="number"],
+    form textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-family: inherit;
+        font-size: 1rem;
+    }
+</style>
+{% endblock %}
