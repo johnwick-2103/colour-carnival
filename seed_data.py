@@ -20,7 +20,7 @@ def seed():
     # The ONE real event
     event = Event.objects.create(
         title="Colour Carnival 1.0",
-        description="The Ultimate Holi Party of the Year! Come join us for an epic celebration of colours, music, and energy. Tickets also available on BookMyShow.",
+        description="The Ultimate Holi Party of the Year! Come join us for an epic celebration of colours, music, and energy.",
         date="2026-03-08 10:00:00",
         venue_name="Pandhurang Lawns",
         venue_address="Guruvar Peth, Opposite to Reliance Mall, Ambajogai - 431517",
