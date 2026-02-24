@@ -117,17 +117,16 @@ EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 465))
 EMAIL_USE_SSL = True
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Colour Carnival <noreply@punecolorfestival.com>')
-EMAIL_TIMEOUT = 30  # seconds — allow enough time for Render free tier to negotiate TLS
-
 # Render free tier completely blocks outbound SMTP (Ports 25, 465, 587).
-# To actually send emails on Render Free, you MUST use an API-based service (SendGrid, Mailgun)
-# via HTTP POST, not SMTP. For now, we fallback to console so bookings don't crash.
+# If you upgrade to a paid Render plan, set RENDER_PAID_TIER=True in your Render Env Vars
+# to automatically enable live email sending via Gmail SMTP.
 import sys
-if 'RENDER' in os.environ:
-    # We are on Render. Force console backend to prevent [Errno 101] Network is unreachable crashes.
+is_render_free = 'RENDER' in os.environ and os.environ.get('RENDER_PAID_TIER') != 'True'
+
+if is_render_free:
+    # We are on Render free tier. Force console backend to prevent [Errno 101] Network is unreachable crashes.
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    print("WARNING: Running on Render free tier. SMTP is blocked. Emails will be printed to console.", file=sys.stderr)
+    print("WARNING: Running on Render Free Tier. SMTP is blocked. Emails printing to console.", file=sys.stderr)
 elif EMAIL_HOST:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 else:
