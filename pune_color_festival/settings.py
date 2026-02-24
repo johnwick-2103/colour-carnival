@@ -110,6 +110,19 @@ CELERY_TIMEZONE = 'Asia/Kolkata'
 CELERY_TASK_ALWAYS_EAGER = True
 
 # Email Settings
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in env vars to enable real sending.
+# For Gmail: use an App Password (not your regular password).
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Colour Carnival <noreply@punecolorfestival.com>')
+
+if EMAIL_HOST:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 LOGIN_URL = '/admin/login/'
+SITE_URL = os.environ.get('SITE_URL', 'http://127.0.0.1:8000')
