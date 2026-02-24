@@ -205,6 +205,8 @@ def payment_verify(request):
             return render(request, 'core/payment_success.html', {'bookings': bookings})
         return redirect('index')
 
+    # Collect IDs first, then process inside transaction
+    paid_booking_ids = []
     with transaction.atomic():
         for booking in bookings:
             booking.status = 'paid'
@@ -213,16 +215,18 @@ def payment_verify(request):
             TicketType.objects.filter(id=booking.ticket_type_id).update(
                 quantity_available=F('quantity_available') - booking.quantity
             )
-            # Send email in background thread — never blocks the HTTP response
-            booking_id = booking.id
-            def _send_email(bid=booking_id):
-                try:
-                    send_ticket_email(bid)
-                except Exception as e:
-                    print(f"[Email] Failed for booking {bid}: {e}")
-            threading.Thread(target=_send_email, daemon=True).start()
+            paid_booking_ids.append(booking.id)
 
-    # FIX #1: Clear session after successful payment
+    # Send emails AFTER transaction commits — so DB shows 'paid' status when email task reads it
+    for bid in paid_booking_ids:
+        def _send_email(booking_id=bid):
+            try:
+                send_ticket_email(booking_id)
+            except Exception as e:
+                print(f"[Email] Failed for booking {booking_id}: {e}")
+        threading.Thread(target=_send_email, daemon=True).start()
+
+    # Clear session after successful payment
     request.session.pop('checkout', None)
     return render(request, 'core/payment_success.html', {'bookings': bookings})
 
