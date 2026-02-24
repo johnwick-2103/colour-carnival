@@ -4,9 +4,9 @@
 {% block content %}
 <!-- Hero Section -->
 <section class="hero">
-    <img src="{% static 'images/logo.jpeg' %}" alt="Pune Color Festival Logo" class="hero-logo">
+    <img src="{% static 'images/logo.jpeg' %}" alt="Ambajogai Color Festival Logo" class="hero-logo">
     <h1>Colour Carnival 1.0</h1>
-    <p>The Ultimate Holi Party of the Year! &mdash; 8th March, Ambajogai</p>
+    <p>The Ultimate Holi Party of the Year!</p>
     <a href="#events" class="btn-primary">Get Your Tickets</a>
 </section>
 
@@ -14,8 +14,8 @@
 <section id="about" class="about-section">
     <h2>About the Festival</h2>
     <div class="content-grid">
-        <p>We are excited to launch Pune Color Festival 1.0! Pune's Biggest Holi Festival, with more fun, more
-            entertainment, and more memories at Multiple Venues.</p>
+        <p>We are excited to launch Ambajogai Color Festival! Ambajogai's Biggest Holi Festival, with more fun, more
+            entertainment, and more memories.</p>
     </div>
 </section>
 
@@ -31,7 +31,10 @@
             {% endif %}
             <h3>{{ event.title }}</h3>
             <p style="font-size: 1.1rem; color: var(--text-color);"><strong>Venue:</strong> {{ event.venue_name }}</p>
-            <p style="color: #666; margin-bottom: 15px;">{{ event.venue_address }}</p>
+            <p style="color: #666; margin-bottom: 10px;">{{ event.venue_address }}</p>
+            {% if event.date %}
+            <p style="color: var(--primary-red); font-weight: 700; margin-bottom: 10px; font-size: 1rem;">&#128197; {{ event.date|date:"l, jS F Y" }}</p>
+            {% endif %}
             {% if event.start_time %}
             <p style="color: var(--primary-red); font-weight: 700; margin-bottom: 15px; font-size: 1rem;">
                 &#128345;
@@ -62,7 +65,7 @@
 
 <!-- Why Attend Section -->
 <section class="features-section">
-    <h2>Why Attend Colour Carnival 1.0?</h2>
+    <h2>Our Providing Services</h2>
     <p class="features-subtitle">Here's what makes this Holi unforgettable</p>
     <div class="features-grid">
         <div class="feature-card">

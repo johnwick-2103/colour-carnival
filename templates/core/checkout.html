@@ -6,11 +6,11 @@
     <div class="checkout-card">
         <h2 style="color: var(--primary-red); margin-bottom: 20px;">Complete Your Payment</h2>
 
-        <p style="font-size: 1.1rem; margin-bottom: 10px;">
+        <p style="font-size: 1.05rem; margin-bottom: 8px;">
             Booking for: <strong>{{ event.title }}</strong>
         </p>
-        <p style="font-size: 1.1rem; margin-bottom: 30px;">
-            Amount to Pay: <strong>&#8377;{{ amount_rupees }}</strong>
+        <p style="font-size: 1.3rem; font-weight: 800; color: var(--primary-red); margin-bottom: 28px;">
+            &#8377;{{ amount_rupees }}
         </p>
 
         {% if local_payment_bypass %}
@@ -18,22 +18,62 @@
             {% csrf_token %}
             <input type="hidden" name="bypass" value="true">
             <input type="hidden" name="razorpay_order_id" value="{{ order_id }}">
-            <button type="submit" class="razorpay-payment-button" style="background-color: #28a745;">
-                Simulate Payment (Local Test)
+            <button type="submit" class="razorpay-payment-button" style="background:#27ae60;">
+                &#9654; Simulate Payment (Local Test)
             </button>
         </form>
+
         {% else %}
-        <form action="{% url 'payment_verify' %}" method="POST">
+        <!-- FIX #4: Modern Razorpay manual checkout — supports UPI, Netbanking, Cards, Wallets -->
+        <form id="rzp-form" action="{% url 'payment_verify' %}" method="POST">
             {% csrf_token %}
-            <script src="https://checkout.razorpay.com/v1/checkout.js" data-key="{{ razorpay_key_id }}"
-                data-amount="{{ amount }}" data-currency="INR" data-order_id="{{ order_id }}"
-                data-buttontext="Pay with Razorpay" data-name="{{ event.title }}"
-                data-description="Festival Ticket Booking" data-prefill.name="{{ customer_name }}"
-                data-prefill.email="{{ customer_email }}" data-prefill.contact="{{ customer_phone }}"
-                data-theme.color="#f29c1f">
-                </script>
+            <input type="hidden" name="razorpay_payment_id" id="rzp_payment_id">
+            <input type="hidden" name="razorpay_order_id" id="rzp_order_id">
+            <input type="hidden" name="razorpay_signature" id="rzp_signature">
         </form>
+
+        <button id="rzp-button" class="razorpay-payment-button">
+            &#128274; Pay &#8377;{{ amount_rupees }} Securely
+        </button>
+
+        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        <script>
+            var options = {
+                "key": "{{ razorpay_key_id }}",
+                "amount": "{{ amount }}",
+                "currency": "INR",
+                "name": "Colour Carnival 1.0",
+                "description": "Festival Ticket Booking",
+                "order_id": "{{ order_id }}",
+                "prefill": {
+                    "name": "{{ customer_name }}",
+                    "email": "{{ customer_email }}",
+                    "contact": "{{ customer_phone }}"
+                },
+                "theme": { "color": "#E8182A" },
+                "handler": function (response) {
+                    document.getElementById('rzp_payment_id').value = response.razorpay_payment_id;
+                    document.getElementById('rzp_order_id').value = response.razorpay_order_id;
+                    document.getElementById('rzp_signature').value = response.razorpay_signature;
+                    document.getElementById('rzp-form').submit();
+                },
+                "modal": {
+                    "ondismiss": function () {
+                        alert("Payment cancelled. Your booking is saved — you can try again.");
+                    }
+                }
+            };
+            var rzp = new Razorpay(options);
+            document.getElementById('rzp-button').onclick = function (e) {
+                rzp.open();
+                e.preventDefault();
+            };
+        </script>
         {% endif %}
+
+        <p style="margin-top: 20px; font-size: 0.82rem; color: #aaa;">
+            &#128274; 100% Secure Payment &nbsp;|&nbsp; Powered by Razorpay
+        </p>
     </div>
 </section>
 {% endblock %}

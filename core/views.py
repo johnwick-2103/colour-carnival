@@ -1,5 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib import messages
+from django.db import transaction
+from django.db.models import F
 from .models import Event, TicketType, Booking
 from .forms import EventForm, TicketTypeForm
 from .tasks import send_ticket_email
@@ -44,15 +47,19 @@ from django.http import HttpResponseBadRequest
 def checkout(request, event_id):
     if request.method != 'POST':
         return redirect('index')
-        
+
     event = get_object_or_404(Event, id=event_id)
-    customer_name = request.POST.get('customer_name')
-    customer_email = request.POST.get('customer_email')
-    customer_phone = request.POST.get('customer_phone')
-    
+    customer_name = request.POST.get('customer_name', '').strip()
+    customer_email = request.POST.get('customer_email', '').strip()
+    customer_phone = request.POST.get('customer_phone', '').strip()
+
+    if not all([customer_name, customer_email, customer_phone]):
+        messages.error(request, 'Please fill in all customer details.')
+        return redirect('index')
+
     total_amount = 0
     selected_tickets = []
-    
+
     for key, value in request.POST.items():
         if key.startswith('qty_'):
             try:
@@ -60,99 +67,140 @@ def checkout(request, event_id):
                 quantity = int(value)
                 if quantity > 0:
                     ticket = TicketType.objects.get(id=ticket_id, event=event)
+                    # FIX #2: Check stock before allowing booking
+                    if ticket.quantity_available < quantity:
+                        messages.error(request, f'Sorry, only {ticket.quantity_available} tickets left for {ticket.name}.')
+                        return redirect('index')
                     total_amount += ticket.price * quantity
                     selected_tickets.append((ticket, quantity))
             except (ValueError, TicketType.DoesNotExist):
                 continue
-                
-    if total_amount == 0:
-        return redirect('index') # Optionally show an error message
 
-    # Initialize Razorpay Client or Bypass
+    if total_amount == 0:
+        messages.error(request, 'Please select at least one ticket.')
+        return redirect('index')
+
+    # FIX #3: Clean up any old pending bookings for this customer+event before creating new ones
+    Booking.objects.filter(
+        customer_phone=customer_phone,
+        ticket_type__event=event,
+        status='pending'
+    ).delete()
+
+    # Initialize Razorpay or Bypass
     is_bypass = getattr(settings, 'LOCAL_PAYMENT_BYPASS', False)
-    
+
     if is_bypass:
         order_id = f"local_test_{event.id}_{customer_phone}"
         payment_data = {'amount': int(total_amount * 100)}
     else:
         client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
         payment_data = {
-            'amount': int(total_amount * 100), # Amount in paise
+            'amount': int(total_amount * 100),
             'currency': 'INR',
-            'receipt': f'order_receipt_{event.id}'
+            'receipt': f'receipt_{event.id}_{customer_phone[-4:]}'
         }
         razorpay_order = client.order.create(data=payment_data)
         order_id = razorpay_order['id']
-    
-    # Save Bookings
-    for ticket, quantity in selected_tickets:
-        Booking.objects.create(
-            ticket_type=ticket,
-            customer_name=customer_name,
-            customer_email=customer_email,
-            customer_phone=customer_phone,
-            quantity=quantity,
-            total_amount=ticket.price * quantity,
-            order_id=order_id,
-            status='pending'
-        )
-        
-    context = {
-        'event': event,
+
+    # Save pending bookings
+    with transaction.atomic():
+        for ticket, quantity in selected_tickets:
+            Booking.objects.create(
+                ticket_type=ticket,
+                customer_name=customer_name,
+                customer_email=customer_email,
+                customer_phone=customer_phone,
+                quantity=quantity,
+                total_amount=ticket.price * quantity,
+                order_id=order_id,
+                status='pending'
+            )
+
+    # FIX #1: Store order details in session, then redirect (PRG pattern)
+    request.session['checkout'] = {
         'order_id': order_id,
         'amount': payment_data['amount'],
-        'amount_rupees': payment_data['amount'] // 100,
-        'razorpay_key_id': settings.RAZORPAY_KEY_ID,
+        'amount_rupees': int(payment_data['amount'] // 100),
         'customer_name': customer_name,
         'customer_email': customer_email,
         'customer_phone': customer_phone,
-        'local_payment_bypass': is_bypass,
+        'event_id': event.id,
+        'is_bypass': is_bypass,
     }
-    
+    return redirect('checkout_display')
+
+
+def checkout_display(request):
+    """GET view — shows the payment form. Session prevents duplicate booking on refresh."""
+    checkout_data = request.session.get('checkout')
+    if not checkout_data:
+        return redirect('index')
+
+    event = get_object_or_404(Event, id=checkout_data['event_id'])
+    context = {
+        'event': event,
+        'order_id': checkout_data['order_id'],
+        'amount': checkout_data['amount'],
+        'amount_rupees': checkout_data['amount_rupees'],
+        'razorpay_key_id': settings.RAZORPAY_KEY_ID,
+        'customer_name': checkout_data['customer_name'],
+        'customer_email': checkout_data['customer_email'],
+        'customer_phone': checkout_data['customer_phone'],
+        'local_payment_bypass': checkout_data['is_bypass'],
+    }
     return render(request, 'core/checkout.html', context)
 
 @csrf_exempt
 def payment_verify(request):
-    if request.method == "POST":
-        data = request.POST
-        payment_id = data.get('razorpay_payment_id', '')
-        razorpay_order_id = data.get('razorpay_order_id', '')
-        signature = data.get('razorpay_signature', '')
-        is_bypass = getattr(settings, 'LOCAL_PAYMENT_BYPASS', False) and data.get('bypass') == 'true'
+    if request.method != 'POST':
+        return redirect('index')
 
-        if not is_bypass:
-            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-            
-            try:
-                client.utility.verify_payment_signature({
-                    'razorpay_order_id': razorpay_order_id,
-                    'razorpay_payment_id': payment_id,
-                    'razorpay_signature': signature
-                })
-            except razorpay.errors.SignatureVerificationError:
-                # Payment signature verification failed
-                bookings = Booking.objects.filter(order_id=razorpay_order_id)
-                for booking in bookings:
-                    booking.status = 'failed'
-                    booking.save()
-                return render(request, 'core/payment_failed.html', {'error': 'Invalid Payment Signature'})
-                
-        # If signature verification is successful or bypassed:
-        if is_bypass:
-            payment_id = f"bypassed_{razorpay_order_id}"
+    data = request.POST
+    payment_id = data.get('razorpay_payment_id', '')
+    razorpay_order_id = data.get('razorpay_order_id', '')
+    signature = data.get('razorpay_signature', '')
+    is_bypass = getattr(settings, 'LOCAL_PAYMENT_BYPASS', False) and data.get('bypass') == 'true'
 
-        bookings = Booking.objects.filter(order_id=razorpay_order_id)
+    if not is_bypass:
+        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        try:
+            client.utility.verify_payment_signature({
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_payment_id': payment_id,
+                'razorpay_signature': signature
+            })
+        except razorpay.errors.SignatureVerificationError:
+            Booking.objects.filter(order_id=razorpay_order_id).update(status='failed')
+            return render(request, 'core/payment_failed.html', {'error': 'Payment verification failed. Please contact support.'})
+
+    if is_bypass:
+        payment_id = f"bypassed_{razorpay_order_id}"
+
+    bookings = Booking.objects.filter(order_id=razorpay_order_id, status='pending')
+    if not bookings.exists():
+        # Already processed (double submission guard)
+        bookings = Booking.objects.filter(order_id=razorpay_order_id, status='paid')
+        if bookings.exists():
+            # Clear session and show success
+            request.session.pop('checkout', None)
+            return render(request, 'core/payment_success.html', {'bookings': bookings})
+        return redirect('index')
+
+    with transaction.atomic():
         for booking in bookings:
             booking.status = 'paid'
             booking.payment_id = payment_id
             booking.save()
-            
-            # Trigger background task to send email and generate QR
+            # FIX #2: Reduce available stock using F() to prevent race conditions
+            TicketType.objects.filter(id=booking.ticket_type_id).update(
+                quantity_available=F('quantity_available') - booking.quantity
+            )
             send_ticket_email.delay(booking.id)
-            
-        return render(request, 'core/payment_success.html', {'bookings': bookings})
-            
-    return redirect('index')
+
+    # FIX #1: Clear session after successful payment
+    request.session.pop('checkout', None)
+    return render(request, 'core/payment_success.html', {'bookings': bookings})
 
 def download_ticket(request, order_id):
     bookings = Booking.objects.filter(order_id=order_id, status='paid')
