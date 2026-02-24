@@ -217,16 +217,17 @@ def payment_verify(request):
             )
             paid_booking_ids.append(booking.id)
 
-    # Send emails AFTER transaction commits — so DB shows 'paid' status when email task reads it
+    # Send emails AFTER transaction commits (DB shows 'paid' now)
+    # Synchronous call is safe — Gunicorn timeout is 120s, SMTP takes ~2-3s
     for bid in paid_booking_ids:
-        def _send_email(booking_id=bid):
-            try:
-                send_ticket_email(booking_id)
-            except Exception as e:
-                print(f"[Email] Failed for booking {booking_id}: {e}")
-        threading.Thread(target=_send_email, daemon=True).start()
+        try:
+            result = send_ticket_email(bid)
+            print(f"[Email] Booking {bid}: {result}")
+        except Exception as e:
+            import sys
+            print(f"[Email ERROR] Booking {bid}: {e}", file=sys.stderr)
 
-    # Clear session after successful payment
+    # Clear checkout session
     request.session.pop('checkout', None)
     return render(request, 'core/payment_success.html', {'bookings': bookings})
 
