@@ -120,8 +120,15 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Colour Carnival <noreply@punecolorfestival.com>')
 EMAIL_TIMEOUT = 30  # seconds — allow enough time for Render free tier to negotiate TLS
 
-
-if EMAIL_HOST:
+# Render free tier completely blocks outbound SMTP (Ports 25, 465, 587).
+# To actually send emails on Render Free, you MUST use an API-based service (SendGrid, Mailgun)
+# via HTTP POST, not SMTP. For now, we fallback to console so bookings don't crash.
+import sys
+if 'RENDER' in os.environ:
+    # We are on Render. Force console backend to prevent [Errno 101] Network is unreachable crashes.
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    print("WARNING: Running on Render free tier. SMTP is blocked. Emails will be printed to console.", file=sys.stderr)
+elif EMAIL_HOST:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
