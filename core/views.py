@@ -6,6 +6,7 @@ from django.db.models import F
 from django.utils import timezone
 from datetime import timedelta
 import uuid
+import threading
 from .models import Event, TicketType, Booking
 from .forms import EventForm, TicketTypeForm
 from .tasks import send_ticket_email
@@ -209,11 +210,17 @@ def payment_verify(request):
             booking.status = 'paid'
             booking.payment_id = payment_id
             booking.save()
-            # FIX #2: Reduce available stock using F() to prevent race conditions
             TicketType.objects.filter(id=booking.ticket_type_id).update(
                 quantity_available=F('quantity_available') - booking.quantity
             )
-            send_ticket_email.delay(booking.id)
+            # Send email in background thread — never blocks the HTTP response
+            booking_id = booking.id
+            def _send_email(bid=booking_id):
+                try:
+                    send_ticket_email(bid)
+                except Exception as e:
+                    print(f"[Email] Failed for booking {bid}: {e}")
+            threading.Thread(target=_send_email, daemon=True).start()
 
     # FIX #1: Clear session after successful payment
     request.session.pop('checkout', None)

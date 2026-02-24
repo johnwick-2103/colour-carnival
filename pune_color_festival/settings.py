@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load .env file for local development (no-op in production where env vars are set directly)
+# Load .env for local development (no-op in production where env vars are set directly)
 load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-(m!d8fw9sn0gjp2v38(=8of3(s#zw=y&ge5@qbr^w9q6jvso5u')
