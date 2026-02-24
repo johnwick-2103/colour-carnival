@@ -3,6 +3,9 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import F
+from django.utils import timezone
+from datetime import timedelta
+import uuid
 from .models import Event, TicketType, Booking
 from .forms import EventForm, TicketTypeForm
 from .tasks import send_ticket_email
@@ -80,7 +83,15 @@ def checkout(request, event_id):
         messages.error(request, 'Please select at least one ticket.')
         return redirect('index')
 
-    # FIX #3: Clean up any old pending bookings for this customer+event before creating new ones
+    # FIX #3: Clean up stale pending bookings older than 20 minutes to free locked slots
+    stale_cutoff = timezone.now() - timedelta(minutes=20)
+    Booking.objects.filter(
+        ticket_type__event=event,
+        status='pending',
+        created_at__lt=stale_cutoff
+    ).delete()
+
+    # Also clean up this customer's own old pending bookings for this event
     Booking.objects.filter(
         customer_phone=customer_phone,
         ticket_type__event=event,
@@ -91,7 +102,8 @@ def checkout(request, event_id):
     is_bypass = getattr(settings, 'LOCAL_PAYMENT_BYPASS', False)
 
     if is_bypass:
-        order_id = f"local_test_{event.id}_{customer_phone}"
+        # FIX #1: Use UUID so bypass order_id is never guessable
+        order_id = f"local_{uuid.uuid4().hex[:16]}"
         payment_data = {'amount': int(total_amount * 100)}
     else:
         client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
@@ -103,9 +115,14 @@ def checkout(request, event_id):
         razorpay_order = client.order.create(data=payment_data)
         order_id = razorpay_order['id']
 
-    # Save pending bookings
+    # FIX #2: Atomic transaction with select_for_update() prevents race conditions on stock
     with transaction.atomic():
         for ticket, quantity in selected_tickets:
+            # Re-fetch ticket with a row-level lock
+            locked_ticket = TicketType.objects.select_for_update().get(id=ticket.id)
+            if locked_ticket.quantity_available < quantity:
+                messages.error(request, f'Sorry, only {locked_ticket.quantity_available} ticket(s) left for {locked_ticket.name}.')
+                return redirect('index')
             Booking.objects.create(
                 ticket_type=ticket,
                 customer_name=customer_name,

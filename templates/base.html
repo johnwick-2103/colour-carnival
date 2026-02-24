@@ -43,6 +43,16 @@
     </header>
 
     <main>
+        {% if messages %}
+        <div style="position:fixed; top:72px; left:50%; transform:translateX(-50%); z-index:9999; width:min(520px, 90vw);">
+            {% for message in messages %}
+            <div style="background:{% if message.tags == 'error' %}#e63946{% else %}#27ae60{% endif %}; color:#fff; padding:14px 20px; border-radius:10px; margin-bottom:8px; font-size:0.97rem; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,0.18); display:flex; justify-content:space-between; align-items:center;">
+                <span>{% if message.tags == 'error' %}⚠️{% else %}✅{% endif %} {{ message }}</span>
+                <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;padding:0 0 0 12px;line-height:1;">&times;</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
         {% block content %}{% endblock %}
     </main>
 
