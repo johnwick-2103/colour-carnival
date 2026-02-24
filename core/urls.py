@@ -10,6 +10,7 @@ urlpatterns = [
     path('checkout/', views.checkout_display, name='checkout_display'),
     path('payment/verify/', views.payment_verify, name='payment_verify'),
     path('ticket/<str:order_id>/', views.download_ticket, name='download_ticket'),
+    path('terms/', views.terms, name='terms'),
     
     # Organizer URLs
     path('organizer/dashboard/', views.organizer_dashboard, name='organizer_dashboard'),

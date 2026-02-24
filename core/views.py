@@ -231,6 +231,9 @@ def payment_verify(request):
     request.session.pop('checkout', None)
     return render(request, 'core/payment_success.html', {'bookings': bookings})
 
+def terms(request):
+    return render(request, 'core/terms.html')
+
 def download_ticket(request, order_id):
     bookings = Booking.objects.filter(order_id=order_id, status='paid')
     if not bookings.exists():
