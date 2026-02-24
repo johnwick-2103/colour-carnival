@@ -15,8 +15,7 @@ import io
 import qrcode
 
 def index(request):
-    events = Event.objects.filter(is_published=True)
-    
+    events = Event.objects.filter(is_published=True).prefetch_related('ticket_types')
     context = {
         'events': events,
         'year': 2026,
@@ -107,14 +106,26 @@ def checkout(request, event_id):
         order_id = f"local_{uuid.uuid4().hex[:16]}"
         payment_data = {'amount': int(total_amount * 100)}
     else:
+        import socket
         client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
         payment_data = {
             'amount': int(total_amount * 100),
             'currency': 'INR',
             'receipt': f'receipt_{event.id}_{customer_phone[-4:]}'
         }
-        razorpay_order = client.order.create(data=payment_data)
-        order_id = razorpay_order['id']
+        old_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(15)  # fail fast if Razorpay is unreachable
+        try:
+            razorpay_order = client.order.create(data=payment_data)
+            order_id = razorpay_order['id']
+        except Exception as e:
+            socket.setdefaulttimeout(old_timeout)
+            messages.error(request, 'Payment gateway error. Please try again in a moment.')
+            import sys
+            print(f'[Razorpay ERROR] {e}', file=sys.stderr)
+            return redirect('index')
+        finally:
+            socket.setdefaulttimeout(old_timeout)
 
     # FIX #2: Atomic transaction with select_for_update() prevents race conditions on stock
     with transaction.atomic():

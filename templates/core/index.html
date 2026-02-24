@@ -37,12 +37,8 @@
             {% endif %}
             {% if event.start_time %}
             <p style="color: var(--primary-red); font-weight: 700; margin-bottom: 15px; font-size: 1rem;">
-                &#128345;
-                <span>{{ event.start_time|time:"g:i A" }}</span>
-                {% if event.end_time %}
-                &ndash;
-                <span>{{ event.end_time|time:"g:i A" }}</span>
-                {% endif %}
+                &#128345; <span>{{ event.start_time|time:"g:i A" }}</span>
+                {% if event.end_time %}&ndash;<span>{{ event.end_time|time:"g:i A" }}</span>{% endif %}
             </p>
             {% endif %}
             {% if event.map_embed_url %}
@@ -51,17 +47,115 @@
                 referrerpolicy="no-referrer-when-downgrade"></iframe>
             {% endif %}
             <p>{{ event.description }}</p>
+
+            <!-- Instant toggle — no server call -->
             <div style="margin-top: 25px;">
-                <button class="btn-primary" hx-get="{% url 'event_tickets' event.id %}"
-                    hx-target="#ticket-container-{{ event.id }}">Book My Ticket</button>
+                <button class="btn-primary" id="btn-{{ event.id }}"
+                    onclick="toggleTicketForm('{{ event.id }}')">Book My Ticket</button>
             </div>
-            <div id="ticket-container-{{ event.id }}" style="margin-top: 20px; text-align: left;"></div>
+
+            <!-- Pre-rendered form, hidden by default, shown instantly on click -->
+            <div id="ticket-container-{{ event.id }}" style="display:none; margin-top: 20px; text-align: left;">
+                <form id="booking-form-{{ event.id }}" action="{% url 'checkout' event.id %}" method="post"
+                    onsubmit="return validateBooking(this, '{{ event.id }}')">
+                    {% csrf_token %}
+                    <div class="ticket-container"
+                        style="display:flex; flex-direction:column; gap:20px; background: #fafafa; padding: 20px; border-radius: 10px;">
+                        <h4 style="margin-bottom: 5px; color: var(--primary-red); text-align: center;">
+                            Select Tickets for {{ event.title }}
+                        </h4>
+                        {% with ticket_types=event.ticket_types.all %}
+                        {% if ticket_types %}
+                        <div style="display: grid; gap: 15px;">
+                            {% for ticket in ticket_types %}
+                            <div class="ticket-card"
+                                style="padding:15px; text-align: left; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h4 style="margin-bottom: 5px;">{{ ticket.name }}</h4>
+                                    <p style="font-size:0.9rem; color: #666; margin-bottom: 5px;">{{ ticket.description }}</p>
+                                    <p class="price" style="font-size:1.2rem; margin: 0;">&#x20B9;{{ ticket.price }}</p>
+                                </div>
+                                <div class="quantity-control" style="margin-top: 0;">
+                                    <input type="number" id="qty_{{ ticket.id }}" name="qty_{{ ticket.id }}"
+                                        value="0" min="0" max="{{ ticket.quantity_available }}"
+                                        data-price="{{ ticket.price }}"
+                                        style="width: 60px; padding: 5px; font-size: 1rem;"
+                                        oninput="updateTotal('{{ event.id }}')">
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="booking-summary"
+                            style="padding:15px; background: #fff; border: 1px solid #ddd; text-align: center; margin-top: 10px;">
+                            <h4 style="margin-bottom: 10px;">Booking Summary</h4>
+                            <div id="total-display-{{ event.id }}"
+                                style="font-size: 1.5rem; font-weight: 700; margin-bottom: 20px;">
+                                Total: &#x20B9;0.00
+                            </div>
+                            <div style="text-align: left; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                                <input type="text" name="customer_name" placeholder="Full Name" required
+                                    style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                                <input type="email" name="customer_email" placeholder="Email Address" required
+                                    style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                                <input type="tel" pattern="[0-9]{10}" maxlength="10" minlength="10"
+                                    name="customer_phone" placeholder="Phone Number" required
+                                    style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                            </div>
+                            <div id="booking-error-{{ event.id }}"
+                                style="display:none; background:#ffe0e0; color:#c00; border:1px solid #f99; padding:10px; border-radius:6px; margin-bottom:10px; font-weight:600;">
+                                &#9888; Please select at least 1 ticket before proceeding.
+                            </div>
+                            <button type="submit" class="btn-primary" style="width: 100%;">Proceed to Book</button>
+                        </div>
+                        {% else %}
+                        <p style="text-align: center;">Ticket information coming soon!</p>
+                        {% endif %}
+                        {% endwith %}
+                    </div>
+                </form>
+            </div>
         </div>
         {% empty %}
         <p>Events coming soon!</p>
         {% endfor %}
     </div>
 </section>
+
+<script>
+function toggleTicketForm(eventId) {
+    var c = document.getElementById('ticket-container-' + eventId);
+    var btn = document.getElementById('btn-' + eventId);
+    if (c.style.display === 'none') {
+        c.style.display = 'block';
+        btn.textContent = '\u2715 Close';
+        c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        c.style.display = 'none';
+        btn.textContent = 'Book My Ticket';
+    }
+}
+function updateTotal(eventId) {
+    var form = document.getElementById('booking-form-' + eventId);
+    var inputs = form.querySelectorAll('input[type="number"]');
+    var total = 0;
+    inputs.forEach(function(inp) {
+        total += (parseInt(inp.value) || 0) * (parseFloat(inp.dataset.price) || 0);
+    });
+    document.getElementById('total-display-' + eventId).textContent = 'Total: \u20B9' + total.toFixed(2);
+}
+function validateBooking(form, eventId) {
+    var inputs = form.querySelectorAll('input[type="number"]');
+    var total = 0;
+    inputs.forEach(function(i) { total += parseInt(i.value) || 0; });
+    if (total === 0) {
+        var err = document.getElementById('booking-error-' + eventId);
+        if (err) err.style.display = 'block';
+        return false;
+    }
+    return true;
+}
+</script>
+
 
 <!-- Why Attend Section -->
 <section class="features-section">
