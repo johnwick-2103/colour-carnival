@@ -229,14 +229,16 @@ def payment_verify(request):
             paid_booking_ids.append(booking.id)
 
     # Send emails AFTER transaction commits (DB shows 'paid' now)
-    # Synchronous call is safe — Gunicorn timeout is 120s, SMTP takes ~2-3s
+    # Synchronous call is safe — Gunicorn timeout is 120s
+    import logging
+    logger = logging.getLogger(__name__)
+    
     for bid in paid_booking_ids:
         try:
             result = send_ticket_email(bid)
-            print(f"[Email] Booking {bid}: {result}")
+            logger.info(f"[Email] Booking {bid}: {result}")
         except Exception as e:
-            import sys
-            print(f"[Email ERROR] Booking {bid}: {e}", file=sys.stderr)
+            logger.error(f"[Email ERROR] Booking {bid}: {str(e)}", exc_info=True)
 
     # Clear checkout session
     request.session.pop('checkout', None)
