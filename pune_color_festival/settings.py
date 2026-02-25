@@ -17,6 +17,14 @@ LOCAL_PAYMENT_BYPASS = os.environ.get('LOCAL_PAYMENT_BYPASS', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']
 
+# Add Railway public domain and custom SITE_URL to CSRF trusted origins
+_csrf_origins = ['https://*.railway.app']
+_site_url = os.environ.get('SITE_URL', '')
+if _site_url:
+    _csrf_origins.append(_site_url)
+
+CSRF_TRUSTED_ORIGINS = _csrf_origins
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -110,24 +118,19 @@ CELERY_TIMEZONE = 'Asia/Kolkata'
 CELERY_TASK_ALWAYS_EAGER = True
 
 # Email Settings
-# Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in env vars to enable real sending.
+# Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in Railway env vars to enable real sending.
 # For Gmail: use an App Password (not your regular password).
-EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+# Railway does NOT block outbound SMTP ports, so SMTP works on all plans.
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 465))
-EMAIL_USE_SSL = True
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True') == 'True'
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False') == 'True'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-# Render free tier completely blocks outbound SMTP (Ports 25, 465, 587).
-# If you upgrade to a paid Render plan, set RENDER_PAID_TIER=True in your Render Env Vars
-# to automatically enable live email sending via Gmail SMTP.
-import sys
-is_render_free = 'RENDER' in os.environ and os.environ.get('RENDER_PAID_TIER') != 'True'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
-if is_render_free:
-    # We are on Render free tier. Force console backend to prevent [Errno 101] Network is unreachable crashes.
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    print("WARNING: Running on Render Free Tier. SMTP is blocked. Emails printing to console.", file=sys.stderr)
-elif EMAIL_HOST:
+# Use SMTP if credentials are set, otherwise print to console (local dev)
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
