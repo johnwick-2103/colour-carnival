@@ -37,6 +37,8 @@ def send_ticket_email(booking_id):
     img_stream = BytesIO()
     img.save(img_stream, format='PNG')
     img_stream.seek(0)
+    qr_b64 = base64.b64encode(img_stream.read()).decode('utf-8')
+    img_stream.seek(0)
 
     # Build ticket download URL
     site_url = getattr(settings, 'SITE_URL', 'https://colour-carnival.onrender.com')
