@@ -144,11 +144,8 @@ See you there! 🌈
     # --- Resend Email Delivery ---
     resend_key = getattr(settings, 'RESEND_API_KEY', '')
     
-    # settings.DEFAULT_FROM_EMAIL evaluates to '' if not set, so getattr fallback won't trigger.
-    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '')
-    if not from_email:
-        # If no domain is configured, default to Resend's testing sandbox
-        from_email = 'Colour Carnival <onboarding@resend.dev>'
+    # Force the Resend Sandbox email since the user's gmail.com domain isn't verified
+    from_email = 'Colour Carnival <onboarding@resend.dev>'
 
     email_status = "Skipped (No Resend Key)"
     
@@ -257,9 +254,9 @@ See you there! 🌈
             media_headers = {
                 "Authorization": f"Bearer {token}"
             }
-            # Simplifying file upload structure for the requests library
+            # Use BytesIO to give the raw bytes a proper file-like interface for requests
             files = {
-                "file": (f"Colour-Carnival-Ticket-{booking.id}.pdf", pdf_bytes, "application/pdf")
+                "file": (f"Colour-Carnival-Ticket-{booking.id}.pdf", BytesIO(pdf_bytes), "application/pdf")
             }
             data = {"messaging_product": "whatsapp"}
             media_response = requests.post(media_url, headers=media_headers, data=data, files=files, timeout=15)
