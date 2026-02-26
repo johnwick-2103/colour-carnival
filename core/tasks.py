@@ -3,6 +3,8 @@ from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from io import BytesIO
 import base64
+import re
+import weasyprint
 import qrcode
 import qrcode.constants
 from .models import Booking
@@ -163,7 +165,7 @@ See you there! 🌈
                 "attachments": [
                     {
                         "filename": f"ticket_qr_{booking.id}.png",
-                        "content": base64.b64encode(img_stream.read()).decode('utf-8')
+                        "content": qr_b64
                     }
                 ]
             }
@@ -182,17 +184,9 @@ See you there! 🌈
 
     if phone_id and token:
         try:
-            import re
-            import weasyprint
-            from django.core.files.base import ContentFile
-
             clean_phone = re.sub(r'\D', '', booking.customer_phone)
             if len(clean_phone) == 10:
                 clean_phone = f"91{clean_phone}"
-
-            import base64
-            qr_b64 = base64.b64encode(img_stream.read()).decode('utf-8')
-            img_stream.seek(0) # Reset stream in case it's used elsewhere
 
             pdf_html = f"""
             <!DOCTYPE html>
@@ -260,8 +254,9 @@ See you there! 🌈
             media_headers = {
                 "Authorization": f"Bearer {token}"
             }
+            # Simplifying file upload structure for the requests library
             files = {
-                "file": (f"ticket_cc_{booking.id}.pdf", pdf_bytes, "application/pdf")
+                "file": (f"Colour-Carnival-Ticket-{booking.id}.pdf", pdf_bytes, "application/pdf")
             }
             data = {"messaging_product": "whatsapp"}
             media_response = requests.post(media_url, headers=media_headers, data=data, files=files, timeout=15)
