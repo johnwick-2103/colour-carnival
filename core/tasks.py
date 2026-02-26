@@ -2,6 +2,7 @@ from celery import shared_task
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from io import BytesIO
+import base64
 import qrcode
 import qrcode.constants
 from .models import Booking
@@ -135,16 +136,74 @@ See you there! 🌈
 </html>
     """
 
+    # --- Resend Email Delivery ---
+    resend_key = getattr(settings, 'RESEND_API_KEY', '')
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'Colour Carnival <noreply@punecolorfestival.com>')
+    email_status = "Skipped (No Resend Key)"
+    
+    if resend_key:
+        try:
+            resend_url = "https://api.resend.com/emails"
+            headers = {
+                "Authorization": f"Bearer {resend_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "from": from_email,
+                "to": [booking.customer_email],
+                "subject": subject,
+                "html": html_body,
+                "text": text_body,
+                "attachments": [
+                    {
+                        "filename": f"ticket_qr_{booking.id}.png",
+                        "content": base64.b64encode(img_stream.read()).decode('utf-8')
+                    }
+                ]
+            }
+            resp = requests.post(resend_url, headers=headers, json=payload, timeout=10)
+            if resp.status_code in [200, 201]:
+                email_status = "Sent"
+            else:
+                email_status = f"Failed: {resp.text}"
+        except Exception as e:
+            email_status = f"Error: {str(e)}"
 
-    msg = EmailMultiAlternatives(
-        subject=subject,
-        body=text_body,
-        from_email=from_email,
-        to=[booking.customer_email],
-    )
-    msg.attach_alternative(html_body, "text/html")
-    msg.attach(f'ticket_qr_{booking.id}.png', img_stream.read(), 'image/png')
-    msg.send(fail_silently=False)
+    # --- WhatsApp Ticket Delivery ---
+    whatsapp_status = "Skipped (No API Keys)"
+    phone_id = getattr(settings, 'WHATSAPP_PHONE_NUMBER_ID', '')
+    token = getattr(settings, 'WHATSAPP_ACCESS_TOKEN', '')
 
-    return f"Ticket email sent to {booking.customer_email} for Booking {booking_id}."
+    if phone_id and token:
+        try:
+            import re
+            clean_phone = re.sub(r'\D', '', booking.customer_phone)
+            if len(clean_phone) == 10:
+                clean_phone = f"91{clean_phone}"
+
+            url = f"https://graph.facebook.com/v18.0/{phone_id}/messages"
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": clean_phone,
+                "type": "template",
+                "template": {
+                    "name": "hello_world",
+                    "language": {
+                        "code": "en_US"
+                    }
+                }
+            }
+            response = requests.post(url, headers=headers, json=payload, timeout=10)
+            
+            if response.status_code in [200, 201]:
+                whatsapp_status = f"Sent to {clean_phone}"
+            else:
+                whatsapp_status = f"Failed ({response.status_code}): {response.text}"
+        except Exception as e:
+            whatsapp_status = f"Error: {str(e)}"
+
+    return f"Resend Email: {email_status} | WhatsApp: {whatsapp_status}"
