@@ -1,7 +1,8 @@
 providers = ["python"]
 
 [phases.setup]
-nixPkgs = ["...", "pango", "cairo", "libffi", "glib", "harfbuzz", "gdk-pixbuf"]
+nixPkgs = ["...", "glib", "pango", "cairo", "fontconfig", "harfbuzz", "gobject-introspection", "freetype", "libffi"]
+nixLibs = ["glib", "pango", "cairo", "fontconfig", "harfbuzz", "gobject-introspection", "freetype", "libffi"]
 
 [phases.build]
 cmds = ["...", "pip install -r requirements.txt && python manage.py collectstatic --no-input && python manage.py migrate --no-input && python create_superuser.py && python seed_data.py"]
