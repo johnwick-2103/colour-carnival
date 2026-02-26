@@ -12,15 +12,17 @@
             <div style="display: grid; gap: 15px;">
                 {% for ticket in ticket_types %}
                 <div class="ticket-card"
-                    style="padding:15px; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
+                    style="padding:15px; text-align: left; display: flex; justify-content: space-between; align-items: center; border: 1px solid #eee; border-radius: 8px; background: #fff;">
+                    <div style="flex: 1;">
                         <h4 style="margin-bottom: 5px;">{{ ticket.name }}</h4>
+                        {% if ticket.description %}
                         <p style="font-size:0.9rem; color: #666; margin-bottom: 5px;">{{ ticket.description }}</p>
-                        <p class="price" style="font-size:1.2rem; margin: 0;">₹{{ ticket.price }}</p>
+                        {% endif %}
+                        <p class="price" style="font-size:1.2rem; margin: 0; color: #333; font-weight: bold;">₹{{ ticket.price }}</p>
                     </div>
-                    <div class="quantity-control" style="margin-top: 0;">
+                    <div class="quantity-control" style="margin-top: 0; margin-left: 20px;">
                         <input type="number" id="qty_{{ ticket.id }}" name="qty_{{ ticket.id }}" value="0" min="0"
-                            max="{{ ticket.quantity_available }}" style="width: 60px; padding: 5px; font-size: 1rem;">
+                            max="{{ ticket.quantity_available }}" style="width: 60px; padding: 5px; font-size: 1rem; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
                     </div>
                 </div>
                 {% endfor %}

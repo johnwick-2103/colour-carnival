@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="about-section" style="text-align: left; padding: 40px 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h2 style="margin-bottom: 5px;">Attendees: {{ event.title }}</h2>
+            <p style="color: #666; margin: 0;">Total Tickets Sold: <strong>{{ total_sold }}</strong> | Revenue: <strong>₹{{ total_revenue }}</strong></p>
+        </div>
+        <a href="{% url 'organizer_dashboard' %}" class="btn-secondary" style="padding: 10px 20px; background: #eee; color: #333; text-decoration: none; border-radius: 5px; font-weight: bold;">&larr; Back to Dashboard</a>
+    </div>
+
+    <div style="background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
+            <thead>
+                <tr style="border-bottom: 2px solid #f0f0f0; text-align: left; background: #f9f9f9;">
+                    <th style="padding: 12px 15px;">Date / Time</th>
+                    <th style="padding: 12px 15px;">Customer Name</th>
+                    <th style="padding: 12px 15px;">Phone</th>
+                    <th style="padding: 12px 15px;">Email</th>
+                    <th style="padding: 12px 15px;">Ticket Type</th>
+                    <th style="padding: 12px 15px;">Qty</th>
+                    <th style="padding: 12px 15px;">Amount Paid</th>
+                    <th style="padding: 12px 15px;">Payment ID</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr style="border-bottom: 1px solid #f0f0f0; transition: background 0.2s;">
+                    <td style="padding: 15px; font-size: 0.9rem; color: #555;">{{ booking.created_at|date:"M d, Y h:i A" }}</td>
+                    <td style="padding: 15px; font-weight: bold; color: #333;">{{ booking.customer_name }}</td>
+                    <td style="padding: 15px; color: #444;">{{ booking.customer_phone }}</td>
+                    <td style="padding: 15px; color: #444; font-size: 0.9rem;">{{ booking.customer_email }}</td>
+                    <td style="padding: 15px; color: #444;">
+                        <span style="background: #e8f0fe; color: #1a73e8; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                            {{ booking.ticket_type.name }}
+                        </span>
+                    </td>
+                    <td style="padding: 15px; font-weight: bold;">{{ booking.quantity }}</td>
+                    <td style="padding: 15px; color: #1e8e3e; font-weight: bold;">₹{{ booking.total_amount }}</td>
+                    <td style="padding: 15px; font-size: 0.8rem; font-family: monospace; color: #666;">{{ booking.payment_id|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" style="padding: 40px 20px; text-align: center; color: #888;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">📉</div>
+                        No tickets have been sold for this event yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

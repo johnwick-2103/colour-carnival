@@ -38,6 +38,10 @@
                     </td>
                     <td style="padding: 15px 10px;">
                         <div style="display: flex; gap: 10px; align-items: center; justify-content: flex-end;">
+                            <a href="{% url 'organizer_event_attendees' event.id %}"
+                                style="color: #1e8e3e; text-decoration: none; font-weight: bold; font-size: 0.9rem;">👥
+                                Attendees</a>
+                            <span style="color: #ddd;">|</span>
                             <a href="{% url 'organizer_event_add_ticket' event.id %}"
                                 style="color: var(--primary-blue); text-decoration: none; font-weight: bold; font-size: 0.9rem;">+
                                 Add Ticket</a>
