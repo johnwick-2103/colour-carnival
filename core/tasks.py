@@ -183,32 +183,123 @@ See you there! 🌈
     if phone_id and token:
         try:
             import re
+            import weasyprint
+            from django.core.files.base import ContentFile
+
             clean_phone = re.sub(r'\D', '', booking.customer_phone)
             if len(clean_phone) == 10:
                 clean_phone = f"91{clean_phone}"
 
-            url = f"https://graph.facebook.com/v18.0/{phone_id}/messages"
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json"
+            import base64
+            qr_b64 = base64.b64encode(img_stream.read()).decode('utf-8')
+            img_stream.seek(0) # Reset stream in case it's used elsewhere
+
+            pdf_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <meta charset="UTF-8">
+            <style>
+              body {{ font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; margin: 0; padding: 20px; }}
+              .wrapper {{ max-width: 600px; margin: 0 auto; border: 2px solid #333; border-radius: 12px; overflow: hidden; }}
+              .header {{ background: #E8182A; padding: 20px; text-align: center; color: #fff; border-bottom: 4px solid #333; }}
+              .header h1 {{ margin: 0; font-size: 28px; text-transform: uppercase; letter-spacing: 2px; }}
+              .receipt-badge {{ background: #222; color: #fff; font-size: 16px; font-weight: 700; text-align: center; padding: 10px; text-transform: uppercase; letter-spacing: 1px; }}
+              .body {{ padding: 30px; }}
+              .table {{ width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 16px; }}
+              .table td {{ padding: 12px 10px; border-bottom: 1px solid #eee; }}
+              .table td:first-child {{ font-weight: bold; color: #555; width: 40%; }}
+              .amount {{ color: #E8182A; font-weight: bold; font-size: 18px; }}
+              .qr-container {{ text-align: center; margin: 20px 0; padding: 20px; background: #f9f9f9; border-radius: 8px; border: 1px dashed #ccc; }}
+              .qr-container img {{ width: 220px; height: 220px; }}
+              .qr-hint {{ font-size: 14px; color: #666; margin-top: 10px; font-weight: bold; }}
+              .footer {{ text-align: center; padding: 20px; font-size: 12px; color: #888; border-top: 1px solid #eee; margin-top: 20px; }}
+            </style>
+            </head>
+            <body>
+            <div class="wrapper">
+              <div class="header">
+                <h1>Colour Carnival 1.0</h1>
+                <p style="margin: 5px 0 0; opacity: 0.9;">Official Event Ticket</p>
+              </div>
+              <div class="receipt-badge">Payment Receipt / Admittance Pass</div>
+              <div class="body">
+                <p><strong>Name:</strong> {booking.customer_name}</p>
+                <table class="table">
+                  <tr><td>🎪 Event</td><td>{event.title}</td></tr>
+                  <tr><td>🎟 Ticket Type</td><td>{booking.ticket_type.name}</td></tr>
+                  <tr><td>🔢 Quantity</td><td>{booking.quantity} Person(s)</td></tr>
+                  <tr><td>💳 Total Paid</td><td class="amount">₹{booking.total_amount}</td></tr>
+                  <tr><td>🔑 Payment ID</td><td>{booking.payment_id}</td></tr>
+                  <tr><td>📋 Booking ID</td><td>#{booking.id}</td></tr>
+                </table>
+                
+                <div class="qr-container">
+                  <img src="data:image/png;base64,{qr_b64}" alt="Ticket QR Code" />
+                  <div class="qr-hint">Scan this QR Code at the Entry Gate</div>
+                </div>
+
+                <div style="font-size: 14px; color: #444; text-align: center; margin-top: 30px;">
+                  <p><strong>📅 Date:</strong> 8th March, 2026 | 10:00 AM – 4:00 PM</p>
+                  <p><strong>📍 Venue:</strong> Pandhurang Lawns, Guruvar Peth, Ambajogai – 431517</p>
+                </div>
+              </div>
+              <div class="footer">
+                Colour Carnival &copy; 2026 | Support: 9145452609 / 9359176168
+              </div>
+            </div>
+            </body>
+            </html>
+            """
+
+            # Step 1: Generate PDF from the HTML Receipt Body
+            pdf_bytes = weasyprint.HTML(string=pdf_html).write_pdf()
+
+            # Step 2: Upload PDF to Meta API (Media Endpoint)
+            media_url = f"https://graph.facebook.com/v18.0/{phone_id}/media"
+            media_headers = {
+                "Authorization": f"Bearer {token}"
             }
-            payload = {
-                "messaging_product": "whatsapp",
-                "to": clean_phone,
-                "type": "template",
-                "template": {
-                    "name": "hello_world",
-                    "language": {
-                        "code": "en_US"
+            files = {
+                "file": (f"ticket_cc_{booking.id}.pdf", pdf_bytes, "application/pdf")
+            }
+            data = {"messaging_product": "whatsapp"}
+            media_response = requests.post(media_url, headers=media_headers, data=data, files=files, timeout=15)
+            
+            if media_response.status_code in [200, 201]:
+                media_id = media_response.json().get('id')
+                
+                # Step 3: Send WhatsApp Message with Document Attachment
+                message_url = f"https://graph.facebook.com/v18.0/{phone_id}/messages"
+                headers = {
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json"
+                }
+                
+                # We send a standard document message instead of a template.
+                # Note: Sending free-form messages requires the user to have initiated the chat within 24h,
+                # OR we must use a pre-approved template that supports document headers.
+                # Assuming this is a business-initiated standard template with a documented header:
+                payload = {
+                    "messaging_product": "whatsapp",
+                    "to": clean_phone,
+                    "type": "document",
+                    "document": {
+                        "id": media_id,
+                        "caption": f"🎟 Colour Carnival Ticket - #{booking.id}\nThank you {booking.customer_name}! Show the attached QR code at the entry gate.",
+                        "filename": f"Colour-Carnival-Ticket-#{booking.id}.pdf"
                     }
                 }
-            }
-            response = requests.post(url, headers=headers, json=payload, timeout=10)
-            
-            if response.status_code in [200, 201]:
-                whatsapp_status = f"Sent to {clean_phone}"
+                
+                msg_response = requests.post(message_url, headers=headers, json=payload, timeout=10)
+                
+                if msg_response.status_code in [200, 201]:
+                    whatsapp_status = f"Sent Document to {clean_phone}"
+                else:
+                    whatsapp_status = f"Msg Failed ({msg_response.status_code}): {msg_response.text}"
             else:
-                whatsapp_status = f"Failed ({response.status_code}): {response.text}"
+                whatsapp_status = f"Media Upload Failed: {media_response.text}"
+                
         except Exception as e:
             whatsapp_status = f"Error: {str(e)}"
 
