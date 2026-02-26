@@ -125,9 +125,9 @@ CELERY_TASK_ALWAYS_EAGER = True
 # For Gmail: use an App Password (not your regular password).
 # Railway does NOT block outbound SMTP ports, so SMTP works on all plans.
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 465))
-EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'True') == 'True'
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'False') == 'True'
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))  # 587 is standard for TLS
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False') == 'True'
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
