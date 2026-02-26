@@ -4,5 +4,9 @@ providers = ["python"]
 nixPkgs = ["...", "glib", "pango", "cairo", "fontconfig", "harfbuzz", "gobject-introspection", "freetype", "libffi"]
 nixLibs = ["glib", "pango", "cairo", "fontconfig", "harfbuzz", "gobject-introspection", "freetype", "libffi"]
 
+[variables]
+FONTCONFIG_FILE = "/etc/fonts/fonts.conf"
+FONTCONFIG_PATH = "/etc/fonts"
+
 [phases.build]
 cmds = ["...", "pip install -r requirements.txt && python manage.py collectstatic --no-input && python manage.py migrate --no-input && python create_superuser.py && python seed_data.py"]
