@@ -228,17 +228,21 @@ def payment_verify(request):
             )
             paid_booking_ids.append(booking.id)
 
-    # Send emails AFTER transaction commits (DB shows 'paid' now)
-    # Synchronous call is safe — Gunicorn timeout is 120s
+    # Send emails in a background thread so the user doesn't wait (avoids timeouts on slow SMTP)
     import logging
-    logger = logging.getLogger(__name__)
+    import threading
     
-    for bid in paid_booking_ids:
-        try:
-            result = send_ticket_email(bid)
-            logger.info(f"[Email] Booking {bid}: {result}")
-        except Exception as e:
-            logger.error(f"[Email ERROR] Booking {bid}: {str(e)}", exc_info=True)
+    def send_emails_in_background(bids):
+        logger = logging.getLogger(__name__)
+        for bid in bids:
+            try:
+                result = send_ticket_email(bid)
+                logger.info(f"[Email] Booking {bid}: {result}")
+            except Exception as e:
+                logger.error(f"[Email ERROR] Booking {bid}: {str(e)}", exc_info=True)
+
+    if paid_booking_ids:
+        threading.Thread(target=send_emails_in_background, args=(paid_booking_ids,)).start()
 
     # Clear checkout session
     request.session.pop('checkout', None)
@@ -344,4 +348,24 @@ def organizer_event_delete(request, event_id):
         event.delete()
         return redirect('organizer_dashboard')
     return render(request, 'organizer/event_confirm_delete.html', {'event': event})
+
+@staff_member_required
+def organizer_event_attendees(request, event_id):
+    from django.db.models import Sum
+    event = get_object_or_404(Event, id=event_id)
+    
+    # Only show successful bookings
+    bookings = Booking.objects.filter(ticket_type__event=event, status='paid').order_by('-created_at')
+    
+    # Calculate totals
+    total_revenue = bookings.aggregate(total=Sum('total_amount'))['total'] or 0
+    total_sold = bookings.aggregate(total=Sum('quantity'))['total'] or 0
+    
+    context = {
+        'event': event,
+        'bookings': bookings,
+        'total_revenue': total_revenue,
+        'total_sold': total_sold
+    }
+    return render(request, 'organizer/attendees.html', context)
 
