@@ -228,21 +228,22 @@ def payment_verify(request):
             )
             paid_booking_ids.append(booking.id)
 
-    # Send emails in a background thread so the user doesn't wait (avoids timeouts on slow SMTP)
+    # Send emails immediately (synchronously) for debugging purposes.
+    # If Resend or Meta fails, this will intentionally crash the view so we can see the full internal error in the Railway logs.
     import logging
-    import threading
-    
-    def send_emails_in_background(bids):
-        logger = logging.getLogger(__name__)
-        for bid in bids:
-            try:
-                result = send_ticket_email(bid)
-                logger.info(f"[Email] Booking {bid}: {result}")
-            except Exception as e:
-                logger.error(f"[Email ERROR] Booking {bid}: {str(e)}", exc_info=True)
+    logger = logging.getLogger(__name__)
 
     if paid_booking_ids:
-        threading.Thread(target=send_emails_in_background, args=(paid_booking_ids,)).start()
+        for bid in paid_booking_ids:
+            try:
+                result = send_ticket_email(bid)
+                logger.warning(f"[DELIVERY SUCCESS] Booking {bid}: {result}")
+                print(f"[DELIVERY SUCCESS] Booking {bid}: {result}")
+            except Exception as e:
+                logger.error(f"[DELIVERY CRITICAL ERROR] Booking {bid} Failed: {str(e)}", exc_info=True)
+                print(f"[DELIVERY CRITICAL ERROR] Booking {bid} Failed: {str(e)}")
+                # Raise the error instantly so the webpage fails if needed (uncomment to force crash)
+                # raise e 
 
     # Clear checkout session
     request.session.pop('checkout', None)
