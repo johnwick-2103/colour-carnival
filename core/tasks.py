@@ -3,6 +3,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from io import BytesIO
 import base64
+import requests
 import re
 import weasyprint
 import qrcode
@@ -293,7 +294,22 @@ See you there! 🌈
                 if msg_response.status_code in [200, 201]:
                     whatsapp_status = f"Sent Document to {clean_phone}"
                 else:
-                    whatsapp_status = f"Msg Failed ({msg_response.status_code}): {msg_response.text}"
+                    # Fallback to the pre-approved hello_world template if Meta rejects free-form documents
+                    # (Meta blocks raw files if the customer hasn't messaged the business in 24 hours)
+                    fallback_payload = {
+                        "messaging_product": "whatsapp",
+                        "to": clean_phone,
+                        "type": "template",
+                        "template": {
+                            "name": "hello_world",
+                            "language": { "code": "en_US" }
+                        }
+                    }
+                    fallback_resp = requests.post(message_url, headers=headers, json=fallback_payload, timeout=10)
+                    if fallback_resp.status_code in [200, 201]:
+                        whatsapp_status = f"Sent 'hello_world' Template to {clean_phone} (Document blocked by Meta 24h rule)"
+                    else:
+                        whatsapp_status = f"Document Failed: {msg_response.text} | Template Failed: {fallback_resp.text}"
             else:
                 whatsapp_status = f"Media Upload Failed: {media_response.text}"
                 
