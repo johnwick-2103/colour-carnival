@@ -233,8 +233,9 @@ img {
 }
 
 .venue-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    display: flex; /* Changed from grid to flex to center items better and prevent over-stretching */
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 28px;
     margin-top: 36px;
 }
@@ -244,9 +245,20 @@ img {
     padding: clamp(20px, 4vw, 32px);
     border-radius: var(--radius);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
-    text-align: center;
+    text-align: left; /* Changed from center */
     border: 2px solid transparent;
-    transition: var(--transition);
+    transition: max-width 0.4s ease, transform 0.3s; /* Smooth animation when opening tickets */
+    width: 100%;
+    max-width: 960px; /* Default width */
+    display: flex;
+    flex-direction: row;
+    gap: 30px;
+    align-items: stretch; /* Make children stretch to match heights */
+}
+
+/* Modifier class added by JS when tickets open to expand the card */
+.venue-card.expanded {
+    max-width: 1200px;
 }
 
 .venue-card:hover {
@@ -255,12 +267,31 @@ img {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.11);
 }
 
+.venue-card-image {
+    flex: 0 0 auto;
+    width: clamp(250px, 30vw, 360px); 
+    display: flex;
+    align-items: flex-start;
+}
+
+.venue-card-content {
+    flex: 1; /* Content takes the remaining space */
+    min-width: 250px;
+}
+
+.ticket-expansion-panel {
+    flex: 2.2;
+    min-width: 500px;
+    transition: all 0.3s ease;
+}
+
 .venue-card img {
     width: 100%;
-    height: 200px;
-    object-fit: cover;
-    border-radius: 10px;
-    margin-bottom: 18px;
+    height: auto;
+    display: block;
+    border-radius: 8px;
+    margin-bottom: 0; /* Removed margin since gap handles it now */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 .venue-card h3 {
@@ -640,8 +671,36 @@ img {
 
 /* ── Tablet / Small Desktop (≤ 900px) ──────────────────────── */
 @media (max-width: 900px) {
-    .ticket-container {
+    .venue-card, .venue-card.expanded {
         flex-direction: column;
+        align-items: center;
+        text-align: center;
+        max-width: 600px;
+    }
+
+    .venue-card-image {
+        flex: none;
+        width: 100%;
+        max-width: 100%;
+        margin-bottom: 10px;
+    }
+
+    /* Important: Override internal ticket-container layout for mobile */
+    .ticket-expansion-panel {
+        min-width: 100%;
+        width: 100%;
+        flex: none;
+        margin-top: 20px;
+    }
+
+    .ticket-container {
+        flex-direction: column !important; /* Forces the sub-columns to stack vertically */
+    }
+
+    .ticket-container > div {
+        flex: none !important; /* Removes percentage constraints */
+        width: 100%;
+        min-width: unset !important;
     }
 
     .booking-summary {

@@ -25,90 +25,100 @@
     <div class="venue-grid">
         {% for event in events %}
         <div class="venue-card">
-            {% if event.image %}
-            <img src="{{ event.image.url }}" alt="{{ event.title }}"
-                style="width:100%; border-radius:10px; margin-bottom:15px; object-fit: cover;">
-            {% endif %}
-            <h3>{{ event.title }}</h3>
-            <p style="font-size: 1.1rem; color: var(--text-color);"><strong>Venue:</strong> {{ event.venue_name }}</p>
-            <p style="color: #666; margin-bottom: 10px;">{{ event.venue_address }}</p>
-            {% if event.date %}
-            <p style="color: var(--primary-red); font-weight: 700; margin-bottom: 10px; font-size: 1rem;">&#128197; {{ event.date|date:"l, jS F Y" }}</p>
-            {% endif %}
-            {% if event.start_time %}
-            <p style="color: var(--primary-red); font-weight: 700; margin-bottom: 15px; font-size: 1rem;">
-                &#128345; <span>{{ event.start_time|time:"g:i A" }}</span>
-                {% if event.end_time %}&ndash;<span>{{ event.end_time|time:"g:i A" }}</span>{% endif %}
-            </p>
-            {% endif %}
-            {% if event.map_embed_url %}
-            <iframe src="{{ event.map_embed_url }}" width="100%" height="250"
-                style="border:0; border-radius:10px; margin-bottom:15px;" allowfullscreen="" loading="lazy"
-                referrerpolicy="no-referrer-when-downgrade"></iframe>
-            {% endif %}
-            <p>{{ event.description }}</p>
-
-            <!-- Instant toggle — no server call -->
-            <div style="margin-top: 25px;">
-                <button class="btn-primary" id="btn-{{ event.id }}"
-                    onclick="toggleTicketForm('{{ event.id }}')">Book My Ticket</button>
+            <div class="venue-card-image">
+                {% if event.image %}
+                <img src="{{ event.image.url }}" alt="{{ event.title }}">
+                {% endif %}
             </div>
+            <div class="venue-card-content">
+                <h3>{{ event.title }}</h3>
+                <p style="font-size: 1.1rem; color: var(--text-color);"><strong>Venue:</strong> {{ event.venue_name }}</p>
+                <p style="color: #666; margin-bottom: 10px;">{{ event.venue_address }}</p>
+                {% if event.date %}
+                <p style="color: var(--primary-red); font-weight: 700; margin-bottom: 10px; font-size: 1rem;">&#128197; {{ event.date|date:"l, jS F Y" }}</p>
+                {% endif %}
+                {% if event.start_time %}
+                <p style="color: var(--primary-red); font-weight: 700; margin-bottom: 15px; font-size: 1rem;">
+                    &#128345; <span>{{ event.start_time|time:"g:i A" }}</span>
+                    {% if event.end_time %}&ndash;<span>{{ event.end_time|time:"g:i A" }}</span>{% endif %}
+                </p>
+                {% endif %}
+                {% if event.map_embed_url %}
+                <iframe src="{{ event.map_embed_url }}" width="100%" height="250"
+                    style="border:0; border-radius:10px; margin-bottom:15px;" allowfullscreen="" loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"></iframe>
+                {% endif %}
+                <p>{{ event.description }}</p>
 
-            <!-- Pre-rendered form, hidden by default, shown instantly on click -->
-            <div id="ticket-container-{{ event.id }}" style="display:none; margin-top: 20px; text-align: left;">
+                <!-- Instant toggle — no server call -->
+                <div style="margin-top: 25px;">
+                    <button class="btn-primary" id="btn-{{ event.id }}"
+                        onclick="toggleTicketForm('{{ event.id }}')">Book My Ticket</button>
+                </div>
+
+                </div>
+            </div>
+            
+            <!-- Pre-rendered form, hidden by default, shown beside content on desktop -->
+            <div id="ticket-container-{{ event.id }}" class="ticket-expansion-panel" style="display:none;">
                 <form id="booking-form-{{ event.id }}" action="{% url 'checkout' event.id %}" method="post"
-                    onsubmit="return validateBooking(this, '{{ event.id }}')">
+                    onsubmit="return validateBooking(this, '{{ event.id }}')" style="height: 100%;">
                     {% csrf_token %}
                     <div class="ticket-container"
-                        style="display:flex; flex-direction:column; gap:20px; background: #fafafa; padding: 20px; border-radius: 10px;">
-                        <h4 style="margin-bottom: 5px; color: var(--primary-red); text-align: center;">
-                            Select Tickets for {{ event.title }}
-                        </h4>
+                        style="display:flex; flex-wrap:wrap; gap:20px; background: #fafafa; padding: 20px; border-radius: 10px; height: 100%; border: 1px solid #eaeaea;">
+                        
                         {% with ticket_types=event.ticket_types.all %}
                         {% if ticket_types %}
-                        <div style="display: grid; gap: 15px;">
-                            {% for ticket in ticket_types %}
-                            <div class="ticket-card"
-                                style="padding:15px; text-align: left; display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h4 style="margin-bottom: 5px;">{{ ticket.name }}</h4>
-                                    <p style="font-size:0.9rem; color: #666; margin-bottom: 5px;">{{ ticket.description }}</p>
-                                    <p class="price" style="font-size:1.2rem; margin: 0;">&#x20B9;{{ ticket.price }}</p>
+                        <!-- Left Sub-column: Ticket Selection -->
+                        <div style="flex: 1; min-width: 250px; display: flex; flex-direction: column;">
+                            <h4 style="margin-bottom: 12px; color: var(--primary-red); text-align: left; font-size: 1.1rem;">
+                                Select Tickets
+                            </h4>
+                            <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; max-height: 350px;">
+                                {% for ticket in ticket_types %}
+                                <div class="ticket-card"
+                                    style="padding:12px; text-align: left; display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #eee; border-radius: 8px;">
+                                    <div>
+                                        <h4 style="margin-bottom: 2px; font-size: 0.95rem;">{{ ticket.name }}</h4>
+                                        <p style="font-size:0.8rem; color: #666; margin-bottom: 2px; line-height: 1.2;">{{ ticket.description }}</p>
+                                        <p class="price" style="font-size:1.1rem; margin: 0; font-weight: bold; color: #333;">&#x20B9;{{ ticket.price }}</p>
+                                    </div>
+                                    <div class="quantity-control" style="margin-top: 0;">
+                                        <input type="number" id="qty_{{ ticket.id }}" name="qty_{{ ticket.id }}"
+                                            value="0" min="0" max="{{ ticket.quantity_available }}"
+                                            data-price="{{ ticket.price }}"
+                                            style="width: 50px; padding: 4px; font-size: 0.9rem; border: 1px solid #ccc; border-radius: 4px; text-align: center;"
+                                            oninput="updateTotal('{{ event.id }}')">
+                                    </div>
                                 </div>
-                                <div class="quantity-control" style="margin-top: 0;">
-                                    <input type="number" id="qty_{{ ticket.id }}" name="qty_{{ ticket.id }}"
-                                        value="0" min="0" max="{{ ticket.quantity_available }}"
-                                        data-price="{{ ticket.price }}"
-                                        style="width: 60px; padding: 5px; font-size: 1rem;"
-                                        oninput="updateTotal('{{ event.id }}')">
-                                </div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
                         </div>
+                        
+                        <!-- Right Sub-column: Booking Summary Form -->
                         <div class="booking-summary"
-                            style="padding:15px; background: #fff; border: 1px solid #ddd; text-align: center; margin-top: 10px;">
-                            <h4 style="margin-bottom: 10px;">Booking Summary</h4>
+                            style="flex: 0 0 260px; padding:15px; background: #fff; border: 1px solid #ddd; text-align: center; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: center;">
                             <div id="total-display-{{ event.id }}"
-                                style="font-size: 1.5rem; font-weight: 700; margin-bottom: 20px;">
+                                style="font-size: 1.3rem; font-weight: 800; margin-bottom: 12px; color: var(--primary-red);">
                                 Total: &#x20B9;0.00
                             </div>
-                            <div style="text-align: left; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                            <div style="text-align: left; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
                                 <input type="text" name="customer_name" placeholder="Full Name" required
-                                    style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                                    style="padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.9rem;">
                                 <input type="email" name="customer_email" placeholder="Email Address" required
-                                    style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                                    style="padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.9rem;">
                                 <input type="tel" pattern="[0-9]{10}" maxlength="10" minlength="10"
                                     name="customer_phone" placeholder="Phone Number" required
-                                    style="padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                                    style="padding: 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.9rem;">
                             </div>
                             <div id="booking-error-{{ event.id }}"
-                                style="display:none; background:#ffe0e0; color:#c00; border:1px solid #f99; padding:10px; border-radius:6px; margin-bottom:10px; font-weight:600;">
-                                &#9888; Please select at least 1 ticket before proceeding.
+                                style="display:none; background:#ffe0e0; color:#c00; border:1px solid #f99; padding:8px; border-radius:4px; margin-bottom:10px; font-weight:600; font-size: 0.8rem;">
+                                &#9888; Select at least 1 ticket.
                             </div>
-                            <button type="submit" class="btn-primary" style="width: 100%;">Proceed to Book</button>
+                            <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; font-size: 1rem;">Proceed to Book</button>
                         </div>
                         {% else %}
-                        <p style="text-align: center;">Ticket information coming soon!</p>
+                        <p style="text-align: center; width: 100%;">Ticket information coming soon!</p>
                         {% endif %}
                         {% endwith %}
                     </div>
@@ -125,12 +135,16 @@
 function toggleTicketForm(eventId) {
     var c = document.getElementById('ticket-container-' + eventId);
     var btn = document.getElementById('btn-' + eventId);
+    var card = c.closest('.venue-card');
+    
     if (c.style.display === 'none') {
         c.style.display = 'block';
+        card.classList.add('expanded');
         btn.textContent = '\u2715 Close';
         c.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else {
         c.style.display = 'none';
+        card.classList.remove('expanded');
         btn.textContent = 'Book My Ticket';
     }
 }
