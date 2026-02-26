@@ -8,9 +8,10 @@ from django.contrib.auth.models import User
 from core.models import Event, TicketType
 
 def seed():
-    # Clear existing data
-    Event.objects.all().delete()
-    TicketType.objects.all().delete()
+    # Protect existing data from being wiped
+    if Event.objects.exists():
+        print("Database already contains events. Skipping seed to prevent data loss.")
+        return
     
     # Create Organizer User
     if not User.objects.filter(username='organizer').exists():

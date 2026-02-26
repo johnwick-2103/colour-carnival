@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pip install -r requirements.txt && python manage.py collectstatic --no-input && python manage.py migrate --no-input && python create_superuser.py"
+buildCommand = "pip install -r requirements.txt && python manage.py collectstatic --no-input && python manage.py migrate --no-input && python create_superuser.py && python seed_data.py"
 
 [deploy]
 startCommand = "gunicorn pune_color_festival.wsgi:application --timeout 120 --workers 2"
