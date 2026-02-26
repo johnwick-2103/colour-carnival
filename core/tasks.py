@@ -138,7 +138,13 @@ See you there! 🌈
 
     # --- Resend Email Delivery ---
     resend_key = getattr(settings, 'RESEND_API_KEY', '')
-    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'Colour Carnival <noreply@punecolorfestival.com>')
+    
+    # settings.DEFAULT_FROM_EMAIL evaluates to '' if not set, so getattr fallback won't trigger.
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '')
+    if not from_email:
+        # If no domain is configured, default to Resend's testing sandbox
+        from_email = 'Colour Carnival <onboarding@resend.dev>'
+
     email_status = "Skipped (No Resend Key)"
     
     if resend_key:
